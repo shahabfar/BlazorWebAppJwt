@@ -1,0 +1,80 @@
+﻿@page "/login"
+@using System.Security.Claims
+@using BlazorWebAppJwt.Client.Services
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@attribute [ExcludeFromInteractiveRouting]
+@inject IdentityRedirectManager RedirectManager
+@inject IWeatherForecaster WeatherForecaster
+
+<h3>Login</h3>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p style="color:red">@ErrorMessage</p>
+}
+
+<EditForm Model="loginModel" OnValidSubmit="PerformLogin" FormName="login">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label for="username">Username</label>
+        <InputText id="username" @bind-Value="loginModel.Username" placeholder="Username" />
+    </div>
+    <div>
+        <label for="password">Password</label>
+        <InputText id="password" @bind-Value="loginModel.Password" type="password" placeholder="Password" />
+    </div>
+    <button type="submit">Login</button>
+</EditForm>
+
+@code {
+    [CascadingParameter]
+    private HttpContext httpContext { get; set; } = default!;
+
+    private LoginModel loginModel { get; set; } = new();
+    private string ErrorMessage;
+
+    private async Task PerformLogin()
+    {
+        var token = await WeatherForecaster.LoginAsync(loginModel.Username, loginModel.Password);
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            // Define claims for the authenticated user
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.Name, loginModel.Username),
+            };
+
+            // Save the token in authentication properties
+            var authProperties = new AuthenticationProperties();
+            authProperties.StoreTokens(new[]
+            {
+                new AuthenticationToken
+                {
+                    Name = "JWT",
+                    Value = token
+                }
+            });
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
+
+            RedirectManager.RedirectTo("/user-claims");
+        }
+        else
+        {
+            ErrorMessage = "Invalid credentials. Please try again.";
+        }
+    }
+    
+    public class LoginModel
+    {
+        public string Username { get; set; } = "test";
+        public string Password { get; set; } = "password";
+    }
+}

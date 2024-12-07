@@ -1,0 +1,27 @@
+﻿@page "/counter"
+@rendermode InteractiveAuto
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<AuthorizeView>
+    <Authorized>
+        <div role="status" style="padding-bottom: 1em;">
+            Current count: @currentCount
+        </div>
+        <Button Appearance="Appearance.Accent" @onclick="IncrementCount">Click me</Button>
+    </Authorized>
+    <NotAuthorized>
+        <p>Only users who are logged in can count.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private int currentCount = 0;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}
